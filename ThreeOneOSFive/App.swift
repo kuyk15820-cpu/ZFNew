@@ -51,7 +51,7 @@ struct ThreeOneOSFiveApp: App {
                         withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.24)) {
                             showOnboarding = false
                         }
-                        appState.detectSupport()
+                        appState.prepareExploit()
                         checkForUpdate()
                     }
                     .environment(\.appLanguage, language)
@@ -82,13 +82,13 @@ struct ThreeOneOSFiveApp: App {
             }
             .onAppear {
                 if !showOnboarding {
-                    appState.detectSupport()
+                    appState.prepareExploit()
                     checkForUpdate()
                 }
             }
             .onChange(of: scenePhase) { phase in
                 guard phase == .active, !showOnboarding else { return }
-                appState.detectSupport()
+                appState.prepareExploit()
             }
             .onOpenURL { url in
                 patchDraftCoordinator.presentImport(url)
@@ -113,28 +113,16 @@ class AppState: ObservableObject {
         )
     }
 
-    var isSupported: Bool { unsupportedMessage == nil }
+    var isSupported: Bool { true }
 
-    func detectSupport() {
-        let v = AppInfo.versionTuple
-        let supported = ExploitSupportPolicy.isSupported(
-            major: v.major,
-            minor: v.minor,
-            patch: v.patch,
-            build: AppInfo.osBuild
-        )
+    func prepareExploit() {
 #if targetEnvironment(simulator)
         if ProcessInfo.processInfo.arguments.contains("--simulate-access") {
             exploitStatus = .success(method: "Simulator preview")
         }
 #endif
 
-        unsupportedMessage = supported ? nil : "iOS \(AppInfo.osVersion) (\(AppInfo.osBuild))"
-        if let unsupportedMessage {
-            exploitStatus = .unsupported(unsupportedMessage)
-            return
-        }
-
+        let v = AppInfo.versionTuple
         let applicable = KernelExploit.isApplicable(
             major: v.major,
             minor: v.minor,
